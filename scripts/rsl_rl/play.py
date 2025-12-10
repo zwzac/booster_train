@@ -163,10 +163,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # export policy to onnx/jit
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
     run_name = os.path.basename(log_dir)
-    export_policy_as_jit(policy_nn, ppo_runner.obs_normalizer, path=export_model_dir,
+    export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_model_dir,
                          filename=f"{agent_cfg.experiment_name}_{run_name}.pt")
     export_policy_as_onnx(
-        policy_nn, normalizer=ppo_runner.obs_normalizer, path=export_model_dir,
+        policy_nn, normalizer=normalizer, path=export_model_dir,
         filename=f"{agent_cfg.experiment_name}_{run_name}.onnx"
     )
 
