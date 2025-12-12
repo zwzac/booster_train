@@ -157,6 +157,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         normalizer = policy_nn.actor_obs_normalizer
     elif hasattr(policy_nn, "student_obs_normalizer"):
         normalizer = policy_nn.student_obs_normalizer
+    elif hasattr(ppo_runner, "obs_normalizer"):     # compatibility for older versions
+        normalizer = ppo_runner.obs_normalizer
     else:
         normalizer = None
 
