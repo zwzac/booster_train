@@ -117,57 +117,76 @@ def main():
     # Define keyframes here. Times are in seconds.
     # Joints not listed will stay at their last value.
     keyframes = [
+        # Resting pose: arms down by the sides.
         Keyframe(
             t=0.0,
             joint_values={
-                "ALeft_Shoulder_Pitch": 0.0,
-                "Left_Shoulder_Roll": 0.0,
-                "Left_Elbow_Pitch": 0.0,
+                "Right_Shoulder_Roll": 1.5,
+                "Left_Shoulder_Roll": -1.5,
+                "Right_Elbow_Yaw": 0.0,
                 "Left_Elbow_Yaw": 0.0,
                 "ARight_Shoulder_Pitch": 0.0,
-                "Right_Shoulder_Roll": 0.0,
+                "ALeft_Shoulder_Pitch": 0.0,
                 "Right_Elbow_Pitch": 0.0,
-                "Right_Elbow_Yaw": 0.0,
+                "Left_Elbow_Pitch": 0.0,
             },
         ),
-        # Raise both arms up (hinge at elbow)
+        # Lift forearms slightly forward to a conversational pose.
         Keyframe(
             t=0.6,
             joint_values={
-                "ALeft_Shoulder_Pitch": 0.5,
-                "Left_Elbow_Pitch": 0.9,
-                "ARight_Shoulder_Pitch": 0.5,
-                "Right_Elbow_Pitch": 0.9,
+                "Right_Shoulder_Roll": 1.5,
+                "Left_Shoulder_Roll": -1.5,
+                "ARight_Shoulder_Pitch": -0.4,
+                "ALeft_Shoulder_Pitch": -0.4,
+                "Right_Elbow_Pitch": 0.0,
+                "Left_Elbow_Pitch": 0.0,
             },
         ),
-        # Move hands together (shoulder roll inward)
+        # Bring hands together (inward rotation).
         Keyframe(
-            t=1.2,
+            t=1.0,
             joint_values={
-                "Left_Shoulder_Roll": 0.4,
-                "Right_Shoulder_Roll": -0.4,
+                "Right_Shoulder_Roll": 1.5,
+                "Left_Shoulder_Roll": -1.5,
+                "Right_Elbow_Yaw": 1.2,
+                "Left_Elbow_Yaw": -1.2,
             },
         ),
-        # Move only right arm back out (left stays in)
+        # Emphasize with the right hand outward.
+        Keyframe(
+            t=1.4,
+            joint_values={
+                "Right_Shoulder_Roll": 1.5,
+                "Left_Shoulder_Roll": -1.5,
+                "Right_Elbow_Yaw": 1.8,
+                "Left_Elbow_Yaw": -0.6,
+                "ARight_Shoulder_Pitch": -0.5,
+                "ALeft_Shoulder_Pitch": -0.3,
+            },
+        ),
+        # Return hands together.
         Keyframe(
             t=1.8,
             joint_values={
-                "Right_Shoulder_Roll": -0.1,
-                "Right_Elbow_Pitch": 0.9,
+                "Right_Shoulder_Roll": 1.5,
+                "Left_Shoulder_Roll": -1.5,
+                "Right_Elbow_Yaw": 1.2,
+                "Left_Elbow_Yaw": -1.2,
             },
         ),
-        # Optional: return to rest at end
+        # Lower back to rest.
         Keyframe(
             t=2.2,
             joint_values={
-                "ALeft_Shoulder_Pitch": 0.0,
-                "Left_Shoulder_Roll": 0.0,
-                "Left_Elbow_Pitch": 0.0,
+                "Right_Shoulder_Roll": 1.5,
+                "Left_Shoulder_Roll": -1.5,
+                "Right_Elbow_Yaw": 0.0,
                 "Left_Elbow_Yaw": 0.0,
                 "ARight_Shoulder_Pitch": 0.0,
-                "Right_Shoulder_Roll": 0.0,
+                "ALeft_Shoulder_Pitch": 0.0,
                 "Right_Elbow_Pitch": 0.0,
-                "Right_Elbow_Yaw": 0.0,
+                "Left_Elbow_Pitch": 0.0,
             },
         ),
     ]
