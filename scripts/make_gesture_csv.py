@@ -116,7 +116,7 @@ def main():
 
     # Define keyframes here. Times are in seconds.
     # Joints not listed will stay at their last value.
-        keyframes = [
+    keyframes = [
         Keyframe(
             t=0.0,
             joint_values={
