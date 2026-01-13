@@ -67,6 +67,14 @@ class ReplayMotionsSceneCfg(InteractiveSceneCfg):
     robot: ArticulationCfg = BOOSTER_K1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
 
+def _resolve_motion_names(motion_file: str, robot: Articulation) -> tuple[list[str], list[str], str]:
+    data = np.load(motion_file)
+    body_names = data["body_names"].tolist() if "body_names" in data else robot.body_names
+    joint_names = data["joint_names"].tolist() if "joint_names" in data else robot.joint_names
+    anchor_name = "Trunk" if "Trunk" in body_names else body_names[0]
+    return body_names, joint_names, anchor_name
+
+
 def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     # Extract scene entities
     robot: Articulation = scene["robot"]
@@ -95,15 +103,15 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     else:
         raise ValueError("Either --motion or --registry_name must be provided.")
 
-    # Load npz file to get body names and determine body_indexes
-    # For K1, we typically use Trunk as anchor body (index 0)
-    # body_indexes should be a list of indices corresponding to the bodies we want to use
-    # For replay, we only need the anchor body (Trunk), which is typically at index 0
-    body_indexes = [0]  # Default to index 0 for anchor body (Trunk)
-    
+    motion_body_names, motion_joint_names, anchor_name = _resolve_motion_names(motion_file, robot)
+    track_body_names = [anchor_name]
+    track_joint_names = robot.joint_names
     motion = MotionLoader(
         motion_file,
-        body_indexes,
+        track_body_names,
+        track_joint_names,
+        default_motion_body_names=motion_body_names,
+        default_motion_joint_names=motion_joint_names,
         tail_len=0,
         device=str(sim.device),
     )
