@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Booster Robot Interface Example</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>Booster Robot Interface</h1>
+      <p>Minimal web UI that proxies to the robot agent manager.</p>
+    </header>
+
+    <section class="panel">
+      <h2>Agent Discovery</h2>
+      <div class="row">
+        <button id="btn-get-agents">Get Agents</button>
+        <button id="btn-get-active">Get Active Agent</button>
+      </div>
+      <pre id="agents-output" class="output"></pre>
+    </section>
+
+    <section class="panel">
+      <h2>Send Agent Event</h2>
+      <div class="grid">
+        <label>
+          Agent ID
+          <input id="agent-id" placeholder="agent id" />
+        </label>
+        <label>
+          Event
+          <input id="agent-event" placeholder="get_agent_ui_component_list" />
+        </label>
+        <label>
+          Component ID
+          <input id="component-id" placeholder="optional" />
+        </label>
+        <label>
+          State
+          <input id="component-state" placeholder="optional" />
+        </label>
+      </div>
+      <button id="btn-send-event">Send Event</button>
+      <pre id="event-output" class="output"></pre>
+    </section>
+
+    <section class="panel">
+      <h2>Live Agent Events</h2>
+      <p>Messages forwarded from ws://&lt;robot-ip&gt;:16888</p>
+      <pre id="ws-output" class="output"></pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
