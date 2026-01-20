@@ -1,7 +1,7 @@
 const orchIdInput = document.getElementById('orch-id');
 const trackIdInput = document.getElementById('track-id');
 const trackTypeInput = document.getElementById('track-type');
-const payloadPreview = document.getElementById('payload-preview');
+const shortcutInput = document.getElementById('orch-shortcut');
 const btnAddFrame = document.getElementById('btn-add-frame');
 const btnClearFrames = document.getElementById('btn-clear-frames');
 const btnImport = document.getElementById('btn-import');
@@ -10,14 +10,35 @@ const fileInput = document.getElementById('file-input');
 
 const framesEl = document.getElementById('frames');
 const previewFrame = document.getElementById('robot-preview');
+const thumbnailFrame = document.getElementById('robot-thumbnailer');
+const movementPreview = document.getElementById('movement-preview');
+const movementScale = document.getElementById('movement-scale');
 
 const state = {
   frames: [],
   previewIndex: 0,
   previewReady: false,
+  thumbnailReady: false,
   ignorePreviewMessages: false,
-  currentPoseDegrees: new Array(10).fill(0)
+  currentPoseDegrees: new Array(10).fill(0),
+  thumbnails: [],
+  thumbnailQueue: [],
+  thumbnailCaptureInProgress: false
 };
+
+if (movementPreview && movementScale) {
+  let syncing = false;
+  const syncScroll = (source, target) => {
+    if (syncing) {
+      return;
+    }
+    syncing = true;
+    target.scrollLeft = source.scrollLeft;
+    syncing = false;
+  };
+  movementPreview.addEventListener('scroll', () => syncScroll(movementPreview, movementScale));
+  movementScale.addEventListener('scroll', () => syncScroll(movementScale, movementPreview));
+}
 
 const JOINT_NAMES = [
   'HEAD_ROLL',
@@ -67,19 +88,25 @@ function buildPayload() {
   const orchId = orchIdInput.value.trim();
   const trackId = trackIdInput.value.trim();
   const trackType = Number(trackTypeInput.value) || 0;
+  const shortcut = shortcutInput.value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  let cumulativeTs = 0;
   return {
     orch_id: orchId,
     track_id: trackId,
     track_type: trackType,
+    shortcut,
     content: state.frames.map((frame) => ({
-      ts: Number(frame.ts) || 0,
+      ts: (cumulativeTs += Math.max(0, Number(frame.ts) || 0)),
       a: frame.a.map((deg) => Math.round((Number(deg) || 0) * 10))
     }))
   };
 }
 
 function updatePreview() {
-  payloadPreview.textContent = pretty(buildPayload());
+  return;
 }
 
 function degreesToRadians(deg) {
@@ -99,15 +126,20 @@ function clampJoint(index, value) {
   return Math.min(limits.max, Math.max(limits.min, raw));
 }
 
+function buildJointMapFromFrame(frame) {
+  const jointMap = {};
+  JOINT_NAMES.forEach((name, index) => {
+    const deg = clampJoint(index, Number(frame?.a?.[index] || 0));
+    jointMap[name] = degreesToRadians(deg);
+  });
+  return jointMap;
+}
+
 function updateRobotPreviewFromFrame(frame) {
   if (!state.previewReady || !previewFrame?.contentWindow?.updateJoints || !frame) {
     return;
   }
-  const jointMap = {};
-  JOINT_NAMES.forEach((name, index) => {
-    const deg = clampJoint(index, Number(frame.a[index] || 0));
-    jointMap[name] = degreesToRadians(deg);
-  });
+  const jointMap = buildJointMapFromFrame(frame);
   state.ignorePreviewMessages = true;
   previewFrame.contentWindow.updateJoints(JSON.stringify(jointMap));
   setTimeout(() => {
@@ -131,9 +163,133 @@ function refreshPreview() {
   state.currentPoseDegrees = frame.a.slice();
   syncActiveFrameInputs();
   updateRobotPreviewFromFrame(frame);
+  queueThumbnail(state.previewIndex);
   if (changed) {
     updatePreview();
   }
+}
+
+function queueThumbnail(index) {
+  const frame = state.frames[index];
+  if (!frame) {
+    return;
+  }
+  const key = JSON.stringify(frame.a);
+  const current = state.thumbnails[index];
+  if (current && current.key === key) {
+    return;
+  }
+  const exists = state.thumbnailQueue.some((item) => item.index === index && item.key === key);
+  if (exists) {
+    return;
+  }
+  state.thumbnailQueue.push({ index, key });
+  processThumbnailQueue();
+}
+
+function queueMissingThumbnails() {
+  state.frames.forEach((frame, index) => {
+    if (!frame) {
+      return;
+    }
+    const key = JSON.stringify(frame.a);
+    const current = state.thumbnails[index];
+    if (!current || current.key !== key) {
+      queueThumbnail(index);
+    }
+  });
+}
+
+function processThumbnailQueue() {
+  if (state.thumbnailCaptureInProgress) {
+    return;
+  }
+  if (!state.thumbnailQueue.length) {
+    return;
+  }
+  const rendererFrame = state.thumbnailReady && thumbnailFrame?.contentWindow?.updateJoints
+    ? thumbnailFrame
+    : null;
+  if (!rendererFrame?.contentWindow?.updateJoints || !rendererFrame?.contentWindow?.takeSnapshot) {
+    return;
+  }
+  const target = state.thumbnailQueue.shift();
+  const frame = state.frames[target.index];
+  if (!frame || JSON.stringify(frame.a) !== target.key) {
+    processThumbnailQueue();
+    return;
+  }
+  state.thumbnailCaptureInProgress = true;
+  const jointMap = buildJointMapFromFrame(frame);
+  rendererFrame.contentWindow.updateJoints(JSON.stringify(jointMap));
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const dataUrl = rendererFrame.contentWindow.takeSnapshot();
+      state.thumbnails[target.index] = { key: target.key, dataUrl };
+      state.thumbnailCaptureInProgress = false;
+      renderMovementPreview();
+      processThumbnailQueue();
+    });
+  });
+}
+
+function renderMovementPreview() {
+  if (!movementPreview) {
+    return;
+  }
+  movementPreview.innerHTML = '';
+  if (movementScale) {
+    movementScale.innerHTML = '';
+  }
+  if (!state.frames.length) {
+    movementPreview.innerHTML = '<div class="empty">No frames to preview yet.</div>';
+    return;
+  }
+  let cumulativeTs = 0;
+  state.frames.forEach((frame, index) => {
+    const card = document.createElement('div');
+    card.className = 'movement-card';
+    if (index === state.previewIndex) {
+      card.classList.add('active');
+    }
+    card.addEventListener('click', () => {
+      if (!state.frames[index]) {
+        return;
+      }
+      state.previewIndex = index;
+      state.currentPoseDegrees = state.frames[index].a.slice();
+      renderFrames();
+      refreshPreview();
+    });
+
+    const thumb = document.createElement('div');
+    thumb.className = 'movement-thumb';
+    const shot = state.thumbnails[index]?.dataUrl;
+    if (shot) {
+      const img = document.createElement('img');
+      img.src = shot;
+      img.alt = `Frame ${index + 1}`;
+      thumb.appendChild(img);
+    } else {
+      thumb.textContent = 'Preview';
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'movement-meta';
+    const duration = Math.max(0, Number(frame.ts) || 0);
+    cumulativeTs += duration;
+    meta.innerHTML = `<span>Frame ${index + 1}</span><span>${duration} ms</span>`;
+
+    card.appendChild(thumb);
+    card.appendChild(meta);
+    movementPreview.appendChild(card);
+
+    if (movementScale) {
+      const tick = document.createElement('span');
+      tick.textContent = `${cumulativeTs} ms`;
+      movementScale.appendChild(tick);
+    }
+  });
 }
 
 function syncActiveFrameInputs() {
@@ -169,34 +325,30 @@ function makeFrame(ts) {
 
 function renderFrames() {
   framesEl.innerHTML = '';
-  state.frames.forEach((frame, index) => {
+  const frame = state.frames[state.previewIndex];
+  if (!frame) {
+    framesEl.innerHTML = '<div class="empty">Add frames to begin editing.</div>';
+  } else {
     const card = document.createElement('div');
-    card.className = 'frame-card';
-    if (index === state.previewIndex) {
-      card.classList.add('active');
-    }
-    card.addEventListener('pointerdown', (event) => {
-      if (event.target && (event.target.tagName === 'INPUT' || event.target.closest('label'))) {
-        return;
-      }
-      state.previewIndex = index;
-      state.currentPoseDegrees = state.frames[index].a.slice();
-      renderFrames();
-      refreshPreview();
-    });
+    card.className = 'frame-card active';
 
     const header = document.createElement('div');
     header.className = 'frame-header';
-    header.innerHTML = `<span>Frame ${index + 1}</span>`;
+    header.innerHTML = `<span>Frame ${state.previewIndex + 1} of ${state.frames.length}</span>`;
 
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'ghost';
     removeBtn.textContent = 'Remove';
     removeBtn.addEventListener('click', () => {
-      state.frames.splice(index, 1);
+      state.frames.splice(state.previewIndex, 1);
+      if (state.previewIndex >= state.frames.length) {
+        state.previewIndex = Math.max(0, state.frames.length - 1);
+      }
+      state.currentPoseDegrees = state.frames[state.previewIndex]?.a?.slice() || new Array(10).fill(0);
       renderFrames();
       updatePreview();
+      refreshPreview();
     });
     header.appendChild(removeBtn);
 
@@ -204,25 +356,23 @@ function renderFrames() {
     grid.className = 'frame-grid';
 
     const tsLabel = document.createElement('label');
-    tsLabel.innerHTML = `ts (ms)<input data-index="${index}" data-field="ts" type="number" value="${frame.ts}">`;
+    tsLabel.innerHTML = `duration (ms)<input data-index="${state.previewIndex}" data-field="ts" type="number" value="${frame.ts}">`;
     grid.appendChild(tsLabel);
 
     frame.a.forEach((value, jointIndex) => {
       const label = document.createElement('label');
       const jointLabel = JOINT_LABELS[jointIndex] || `J${jointIndex + 1}`;
       const limits = JOINT_LIMITS[jointIndex] || {};
-      label.innerHTML = `${jointLabel}<input data-index="${index}" data-joint="${jointIndex}" type="number" step="1" min="${limits.min ?? ''}" max="${limits.max ?? ''}" value="${value}">`;
+      label.innerHTML = `${jointLabel}<input data-index="${state.previewIndex}" data-joint="${jointIndex}" type="number" step="1" min="${limits.min ?? ''}" max="${limits.max ?? ''}" value="${value}">`;
       grid.appendChild(label);
     });
 
     card.appendChild(header);
     card.appendChild(grid);
     framesEl.appendChild(card);
-  });
-
-  if (!state.frames.length) {
-    framesEl.innerHTML = '<div class="empty">Add frames to begin editing.</div>';
   }
+  queueMissingThumbnails();
+  renderMovementPreview();
 }
 
 framesEl.addEventListener('input', (event) => {
@@ -309,8 +459,7 @@ framesEl.addEventListener('keydown', (event) => {
 });
 
 btnAddFrame.addEventListener('click', () => {
-  const last = state.frames[state.frames.length - 1];
-  const nextTs = last ? Number(last.ts) + 20 : 0;
+  const nextTs = 20;
   state.frames.push(makeFrame(nextTs));
   state.previewIndex = state.frames.length - 1;
   renderFrames();
@@ -320,6 +469,9 @@ btnAddFrame.addEventListener('click', () => {
 
 btnClearFrames.addEventListener('click', () => {
   state.frames = [];
+  state.thumbnails = [];
+  state.thumbnailQueue = [];
+  state.thumbnailCaptureInProgress = false;
   renderFrames();
   updatePreview();
 });
@@ -342,8 +494,27 @@ fileInput.addEventListener('change', async (event) => {
       : Array.isArray(json.content)
         ? json.content
         : [];
+    let prevTs = 0;
+    let useCumulative = true;
+    for (let i = 0; i < frames.length; i += 1) {
+      const rawTs = Number(frames[i]?.ts) || 0;
+      if (rawTs < prevTs) {
+        useCumulative = false;
+        break;
+      }
+      prevTs = rawTs;
+    }
+    prevTs = 0;
     state.frames = frames.map((frame) => ({
-      ts: Number(frame.ts) || 0,
+      ts: (() => {
+        const rawTs = Number(frame.ts) || 0;
+        if (!useCumulative) {
+          return Math.max(0, rawTs);
+        }
+        const duration = Math.max(0, rawTs - prevTs);
+        prevTs = rawTs;
+        return duration;
+      })(),
       a: Array.isArray(frame.a)
         ? frame.a.map((v, i) => {
           const value = Number(v) || 0;
@@ -354,6 +525,9 @@ fileInput.addEventListener('change', async (event) => {
     }));
     state.previewIndex = 0;
     state.currentPoseDegrees = state.frames[0]?.a?.slice() || new Array(10).fill(0);
+    state.thumbnails = [];
+    state.thumbnailQueue = [];
+    state.thumbnailCaptureInProgress = false;
     renderFrames();
     updatePreview();
     refreshPreview();
@@ -376,14 +550,25 @@ btnExport.addEventListener('click', () => {
 trackIdInput.addEventListener('input', updatePreview);
 trackTypeInput.addEventListener('input', updatePreview);
 orchIdInput.addEventListener('input', updatePreview);
+shortcutInput.addEventListener('input', updatePreview);
 
 previewFrame.addEventListener('load', () => {
   state.previewReady = true;
   refreshPreview();
 });
 
+if (thumbnailFrame) {
+  thumbnailFrame.addEventListener('load', () => {
+    state.thumbnailReady = true;
+    queueMissingThumbnails();
+  });
+}
+
 window.addEventListener('message', (event) => {
   const data = event.data || {};
+  if (previewFrame?.contentWindow && event.source !== previewFrame.contentWindow) {
+    return;
+  }
   if (data.type !== 'urdf_joint_update') {
     return;
   }

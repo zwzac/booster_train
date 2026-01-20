@@ -38,6 +38,10 @@
           Track Type
           <input id="track-type" type="number" value="0" />
         </label>
+        <label>
+          Controller Shortcut
+          <input id="orch-shortcut" placeholder="LT+RT+A" />
+        </label>
       </div>
     </section>
 
@@ -50,7 +54,6 @@
         <button id="btn-add-frame">Add Frame</button>
         <button id="btn-clear-frames" class="ghost">Clear</button>
         <button id="btn-import" class="ghost">Import JSON</button>
-        <button id="btn-export" class="ghost">Export JSON</button>
         <input id="file-input" type="file" accept="application/json" />
       </div>
       <div id="frames" class="frame-list"></div>
@@ -63,16 +66,28 @@
       </div>
       <div class="preview-shell">
         <iframe id="robot-preview" title="Robot preview" src="urdf_render/index.html?model=T1&mode=normal"></iframe>
+        <iframe id="robot-thumbnailer" class="thumbnail-renderer" title="Robot thumbnail renderer" src="urdf_render/index.html?model=T1&mode=normal" tabindex="-1" aria-hidden="true"></iframe>
         <div class="preview-note">Drag to rotate. Preview uses T1 joints and radians.</div>
       </div>
     </section>
 
     <section class="panel">
       <div class="panel-header">
-        <h2>Payload Preview</h2>
-        <p>This is the JSON payload you will export and upload to the robot.</p>
+        <h2>Movement Preview</h2>
+        <p>Frame thumbnails with per-frame duration.</p>
       </div>
-      <pre id="payload-preview" class="output"></pre>
+      <div id="movement-preview" class="movement-strip"></div>
+      <div id="movement-scale" class="movement-scale"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Export Orchestration</h2>
+        <p>Exports a robot-compatible orchestration JSON file. Shortcut is optional.</p>
+      </div>
+      <div class="btn-group">
+        <button id="btn-export">Export Orchestration</button>
+      </div>
     </section>
   </main>
 
