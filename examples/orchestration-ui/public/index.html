@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Booster Orchestration Editor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Booster Orchestration</p>
+        <h1>Frame Editor</h1>
+        <p class="subtitle">Build joint poses frame by frame for the upper body and export to JSON.</p>
+      </div>
+      <div class="hero-badge">
+        <span>Offline</span>
+        <strong>Editor</strong>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Export Settings</h2>
+        <p>Set identifiers that will be used in the exported JSON file.</p>
+      </div>
+      <div class="grid">
+        <label>
+          Orchestration ID
+          <input id="orch-id" placeholder="orch id" />
+        </label>
+        <label>
+          Track ID
+          <input id="track-id" placeholder="track_main" />
+        </label>
+        <label>
+          Track Type
+          <input id="track-type" type="number" value="0" />
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Frames</h2>
+        <p>Angles are in degrees to match the preview sliders. Upload converts to tenths of degrees.</p>
+      </div>
+      <div class="btn-group">
+        <button id="btn-add-frame">Add Frame</button>
+        <button id="btn-clear-frames" class="ghost">Clear</button>
+        <button id="btn-import" class="ghost">Import JSON</button>
+        <button id="btn-export" class="ghost">Export JSON</button>
+        <input id="file-input" type="file" accept="application/json" />
+      </div>
+      <div id="frames" class="frame-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Pose Preview</h2>
+        <p>Preview updates from the selected frame using the original URDF renderer.</p>
+      </div>
+      <div class="preview-shell">
+        <iframe id="robot-preview" title="Robot preview" src="urdf_render/index.html?model=T1&mode=normal"></iframe>
+        <div class="preview-note">Drag to rotate. Preview uses T1 joints and radians.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Payload Preview</h2>
+        <p>This is the JSON payload you will export and upload to the robot.</p>
+      </div>
+      <pre id="payload-preview" class="output"></pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
