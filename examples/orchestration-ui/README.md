@@ -6,6 +6,7 @@ frames and export them to JSON.
 ## What it does
 - Edit frames with a live URDF preview
 - Export/import JSON for offline editing
+- Publish frames to the robot over SSH
 
 ## Requirements
 - Python 3.10+
@@ -35,6 +36,15 @@ http://localhost:3000
 ## Notes
 - Frame inputs use degrees to match the preview sliders. Export converts to tenths of degrees.
 - The preview iframe is served from `public/urdf_render` copied from the Android assets.
+
+## Publish to robot (SSH)
+The UI can publish a track directly to the robot by SSHing into
+`/opt/BoosterAgent/agent_storage/com.boosterobotics.teaching/` and writing:
+
+- `orchestrations.json`
+- `orchestrations/<orch_id>/track_<track_id>/<track_id>.json`
+
+Use the "Publish via SSH" button with `user@host` + password.
 
 ## Upload to robot (scp)
 The mobile app sends orchestration JSON to the robot via the agent RPC

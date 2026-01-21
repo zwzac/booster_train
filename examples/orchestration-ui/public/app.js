@@ -5,8 +5,12 @@ const shortcutInput = document.getElementById('orch-shortcut');
 const btnAddFrame = document.getElementById('btn-add-frame');
 const btnClearFrames = document.getElementById('btn-clear-frames');
 const btnImport = document.getElementById('btn-import');
-const btnExport = document.getElementById('btn-export');
+const btnExportRaw = document.getElementById('btn-export-raw');
+const btnPublish = document.getElementById('btn-publish');
 const fileInput = document.getElementById('file-input');
+const robotHostInput = document.getElementById('robot-host');
+const robotPasswordInput = document.getElementById('robot-password');
+const publishStatus = document.getElementById('publish-status');
 
 const framesEl = document.getElementById('frames');
 const previewFrame = document.getElementById('robot-preview');
@@ -89,7 +93,7 @@ function buildPayload() {
   const trackId = trackIdInput.value.trim();
   const trackType = Number(trackTypeInput.value) || 0;
   const shortcut = shortcutInput.value
-    .split(',')
+    .split(/[,+]/)
     .map((entry) => entry.trim())
     .filter(Boolean);
   let cumulativeTs = 0;
@@ -107,6 +111,42 @@ function buildPayload() {
 
 function updatePreview() {
   return;
+}
+
+function setPublishStatus(message, status) {
+  if (!publishStatus) {
+    return;
+  }
+  publishStatus.textContent = message;
+  publishStatus.classList.remove('muted', 'success', 'error');
+  publishStatus.classList.add(status || 'muted');
+}
+
+function downloadJson(payload, filename) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseRobotAddress(value) {
+  const trimmed = (value || '').trim();
+  if (!trimmed) {
+    return null;
+  }
+  const atIndex = trimmed.indexOf('@');
+  if (atIndex <= 0 || atIndex === trimmed.length - 1) {
+    return null;
+  }
+  const username = trimmed.slice(0, atIndex).trim();
+  const host = trimmed.slice(atIndex + 1).trim();
+  if (!username || !host) {
+    return null;
+  }
+  return { username, host };
 }
 
 function degreesToRadians(deg) {
@@ -532,20 +572,71 @@ fileInput.addEventListener('change', async (event) => {
     updatePreview();
     refreshPreview();
   } catch (err) {
-    payloadPreview.textContent = `Import failed: ${err}`;
+    setPublishStatus(`Import failed: ${err}`, 'error');
   }
 });
 
-btnExport.addEventListener('click', () => {
-  const payload = buildPayload();
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `orch-track-${payload.orch_id || 'unknown'}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
+if (btnExportRaw) {
+  btnExportRaw.addEventListener('click', () => {
+    const payload = buildPayload();
+    const frames = payload.content || [];
+    downloadJson(
+      frames,
+      `orch-track-${payload.orch_id || 'unknown'}-raw.json`
+    );
+  });
+}
+
+if (btnPublish) {
+  btnPublish.addEventListener('click', async () => {
+    if (!state.frames.length) {
+      setPublishStatus('Add at least one frame before publishing.', 'error');
+      return;
+    }
+    const robotAddress = parseRobotAddress(robotHostInput?.value);
+    const password = (robotPasswordInput?.value || '').trim();
+    if (!robotAddress || !password) {
+      setPublishStatus('Enter robot address (user@host) and password.', 'error');
+      return;
+    }
+    const payload = buildPayload();
+    setPublishStatus('Publishing to robot...', 'muted');
+    try {
+      const response = await fetch('/api/publish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          robot: {
+            host: robotAddress.host,
+            username: robotAddress.username,
+            password
+          },
+          payload
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errorMsg = result.error || 'Publish failed.';
+        setPublishStatus(errorMsg, 'error');
+        return;
+      }
+      if (!orchIdInput.value.trim()) {
+        orchIdInput.value = result.orch_id || '';
+      }
+      if (!trackIdInput.value.trim()) {
+        trackIdInput.value = result.track_id || '';
+      }
+      setPublishStatus(
+        `Published. Orch ID: ${result.orch_id}, Track ID: ${result.track_id}`,
+        'success'
+      );
+    } catch (err) {
+      setPublishStatus(`Publish failed: ${err}`, 'error');
+    }
+  });
+}
 
 trackIdInput.addEventListener('input', updatePreview);
 trackTypeInput.addEventListener('input', updatePreview);

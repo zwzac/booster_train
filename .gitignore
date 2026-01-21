@@ -71,3 +71,5 @@ tests/
 .isaac-lab-docker-history
 /isaacsim_py311
 .venv
+/env
+venv

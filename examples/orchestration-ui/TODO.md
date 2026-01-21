@@ -1,14 +1,14 @@
 Orchestration UI TODO
 - Merge other-device changes for slideshow + thumbnails and verify UI parity.
-- Add Export Settings UI:
-  - Button A: download raw track JSON (array of {ts, a} in tenths of degrees).
-  - Button B: SSH publish flow (user@ip + password).
-- SSH publish flow steps:
-  - Generate orch_id + track_id (32-char hex, MD5-like).
-  - Create `/opt/BoosterAgent/agent_storage/com.boosterobotics.teaching/orchestrations/<orch_id>/track_<track_id>/`.
-  - Write `<track_id>.json` with raw frame array.
-  - Patch `/opt/BoosterAgent/agent_storage/com.boosterobotics.teaching/orchestrations.json` with new entry.
-- Confirm default `track_type` to use (backup shows `track_type = 1`; app defaults to 0 when missing).
+- [x] Add Export Settings UI:
+  - [x] Button A: download raw track JSON (array of {ts, a} in tenths of degrees).
+  - [x] Button B: SSH publish flow (user@ip + password).
+- [x] SSH publish flow steps:
+  - [x] Generate orch_id + track_id (32-char hex, MD5-like).
+  - [x] Create `/opt/BoosterAgent/agent_storage/com.boosterobotics.teaching/orchestrations/<orch_id>/track_<track_id>/`.
+  - [x] Write `<track_id>.json` with raw frame array.
+  - [x] Patch `/opt/BoosterAgent/agent_storage/com.boosterobotics.teaching/orchestrations.json` with new entry.
+- [ ] Confirm default `track_type` to use (backup shows `track_type = 1`; app defaults to 0 when missing).
 
 Session findings (paths + formats)
 - On-robot storage base: `/opt/BoosterAgent/agent_storage/com.boosterobotics.teaching/`.

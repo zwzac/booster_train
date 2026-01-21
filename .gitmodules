@@ -7,3 +7,6 @@
 [submodule "booster_deploy"]
 	path = booster_deploy
 	url = https://github.com/BoosterRobotics/booster_deploy.git
+[submodule "booster_robotics_sdk"]
+	path = booster_robotics_sdk
+	url = https://github.com/BoosterRobotics/booster_robotics_sdk.git
