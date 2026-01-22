@@ -144,7 +144,8 @@ label {
   color: var(--muted);
 }
 
-input {
+input,
+select {
   background: #0c1118;
   border: 1px solid #2d3949;
   color: var(--text);
@@ -152,6 +153,37 @@ input {
   border-radius: 10px;
   font-size: 14px;
   font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+}
+
+select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+}
+
+label small {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.shortcut-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcut-select span {
+  color: var(--muted);
+  font-weight: 600;
 }
 
 button {

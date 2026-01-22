@@ -1,7 +1,8 @@
 const orchIdInput = document.getElementById('orch-id');
 const trackIdInput = document.getElementById('track-id');
 const trackTypeInput = document.getElementById('track-type');
-const shortcutInput = document.getElementById('orch-shortcut');
+const shortcutLeftSelect = document.getElementById('shortcut-left');
+const shortcutRightSelect = document.getElementById('shortcut-right');
 const btnAddFrame = document.getElementById('btn-add-frame');
 const btnClearFrames = document.getElementById('btn-clear-frames');
 const btnImport = document.getElementById('btn-import');
@@ -88,14 +89,30 @@ const JOINT_LIMITS = [
   { min: 0, max: 118 }
 ];
 
+const LEFT_SHORTCUTS = ['LT', 'LB', 'RT', 'RB'];
+const RIGHT_SHORTCUTS = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'X', 'Y', 'A', 'B'];
+
+function normalizeShortcutValue(value) {
+  return (value || '').trim().toUpperCase();
+}
+
+function buildShortcutList() {
+  const left = normalizeShortcutValue(shortcutLeftSelect?.value);
+  const right = normalizeShortcutValue(shortcutRightSelect?.value);
+  if (!right) {
+    return [];
+  }
+  if (!left) {
+    return [right];
+  }
+  return [left, right];
+}
+
 function buildPayload() {
   const orchId = orchIdInput.value.trim();
   const trackId = trackIdInput.value.trim();
   const trackType = Number(trackTypeInput.value) || 0;
-  const shortcut = shortcutInput.value
-    .split(/[,+]/)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
+  const shortcut = buildShortcutList();
   let cumulativeTs = 0;
   return {
     orch_id: orchId,
@@ -147,6 +164,18 @@ function parseRobotAddress(value) {
     return null;
   }
   return { username, host };
+}
+
+function applyShortcutSelection(shortcut) {
+  if (!shortcutLeftSelect || !shortcutRightSelect) {
+    return;
+  }
+  const list = Array.isArray(shortcut) ? shortcut : [];
+  const normalized = list.map(normalizeShortcutValue).filter(Boolean);
+  const left = normalized.find((value) => LEFT_SHORTCUTS.includes(value)) || '';
+  const right = normalized.find((value) => RIGHT_SHORTCUTS.includes(value)) || '';
+  shortcutLeftSelect.value = left;
+  shortcutRightSelect.value = right;
 }
 
 function degreesToRadians(deg) {
@@ -534,6 +563,7 @@ fileInput.addEventListener('change', async (event) => {
       : Array.isArray(json.content)
         ? json.content
         : [];
+    const shortcut = Array.isArray(json.shortcut) ? json.shortcut : [];
     let prevTs = 0;
     let useCumulative = true;
     for (let i = 0; i < frames.length; i += 1) {
@@ -571,6 +601,7 @@ fileInput.addEventListener('change', async (event) => {
     renderFrames();
     updatePreview();
     refreshPreview();
+    applyShortcutSelection(shortcut);
   } catch (err) {
     setPublishStatus(`Import failed: ${err}`, 'error');
   }
@@ -641,7 +672,12 @@ if (btnPublish) {
 trackIdInput.addEventListener('input', updatePreview);
 trackTypeInput.addEventListener('input', updatePreview);
 orchIdInput.addEventListener('input', updatePreview);
-shortcutInput.addEventListener('input', updatePreview);
+if (shortcutLeftSelect) {
+  shortcutLeftSelect.addEventListener('change', updatePreview);
+}
+if (shortcutRightSelect) {
+  shortcutRightSelect.addEventListener('change', updatePreview);
+}
 
 previewFrame.addEventListener('load', () => {
   state.previewReady = true;
